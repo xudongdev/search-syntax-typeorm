@@ -1,0 +1,110 @@
+{
+  "name": "search-syntax-typeorm",
+  "version": "0.0.0-development",
+  "description": "search syntax of typeorm",
+  "author": {
+    "name": "Xudong Huang",
+    "email": "me@xudong.dev",
+    "url": "https://www.xudong.dev/"
+  },
+  "bugs": "https://github.com/xudongdev/search-syntax-typeorm/issues",
+  "homepage": "https://github.com/xudongdev/search-syntax-typeorm#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xudongdev/search-syntax-typeorm.git"
+  },
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "generate": "jison grammar.jison",
+    "build": "rm -rf dist && tsc",
+    "prepublish": "npm run build",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "lint": "eslint src/**/**.ts",
+    "lint:fix": "eslint src/**/**.ts --fix",
+    "semantic-release": "semantic-release"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jest": "^25.2.1",
+    "@typescript-eslint/eslint-plugin": "^2.31.0",
+    "@typescript-eslint/parser": "^2.31.0",
+    "commitizen": "^4.1.2",
+    "cz-conventional-changelog": "^3.2.0",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-config-standard": "^14.1.1",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-jest": "^23.9.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^3.1.3",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-simple-import-sort": "^5.0.3",
+    "eslint-plugin-standard": "^4.0.1",
+    "husky": "^4.2.5",
+    "jest": "^26.0.1",
+    "jison": "^0.4.18",
+    "lint-staged": "^10.2.2",
+    "prettier": "^2.0.5",
+    "reflect-metadata": "^0.1.13",
+    "search-syntax": "^1.1.3",
+    "semantic-release": "^17.0.7",
+    "ts-jest": "^25.5.0",
+    "typeorm": "^0.2.24",
+    "typescript": "^3.8.3"
+  },
+  "peerDependencies": {
+    "typeorm": "^0.0.0",
+    "search-syntax": "^1.0.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "prepare-commit-msg": "exec < /dev/tty && git cz --hook || true"
+    }
+  },
+  "lint-staged": {
+    "*.{json,js,jsx,ts,tsx,md}": [
+      "prettier --write",
+      "git add"
+    ],
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "git add"
+    ]
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "testRegex": ".test.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "coverageDirectory": "./coverage",
+    "testEnvironment": "node"
+  },
+  "release": {
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/github",
+      "@semantic-release/release-notes-generator",
+      [
+        "@semantic-release/npm",
+        {
+          "npmPublish": true
+        }
+      ]
+    ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}
