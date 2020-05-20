@@ -9,10 +9,7 @@ import {
 } from "search-syntax";
 import {
   Brackets,
-  createQueryBuilder,
-  getConnection,
   ObjectLiteral,
-  ObjectType,
   SelectQueryBuilder,
   WhereExpression,
 } from "typeorm";
@@ -39,11 +36,13 @@ function processTermNode({
   queryBuilder: WhereExpression;
   tableName: string;
 }): void {
-  if (!node.name) return;
+  if (node.name === null) {
+    return;
+  }
 
-  const column = columns.find(({ propertyName }) => propertyName === node.name);
+  const column = columns.find((c) => c.propertyName === node.name);
 
-  if (!column) {
+  if (column === null) {
     return;
   }
 
@@ -120,19 +119,11 @@ function processQueryNode({
   });
 }
 
-export function processQuery<T>(
-  target: string | ObjectType<T>,
-  query: string,
-  queryBuilder?: SelectQueryBuilder<T>
+export function applySearchSyntaxToQueryBuilder<T>(
+  queryBuilder: SelectQueryBuilder<T>,
+  query: string
 ): SelectQueryBuilder<T> {
-  // eslint-disable-next-line no-param-reassign
-  queryBuilder = queryBuilder || createQueryBuilder(target);
-
-  if (!query) {
-    return queryBuilder;
-  }
-
-  const { tableName, columns } = getConnection().getMetadata(target);
+  const { tableName, columns } = queryBuilder.expressionMap.mainAlias?.metadata;
 
   processQueryNode({
     columns,
