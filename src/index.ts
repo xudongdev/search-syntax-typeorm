@@ -125,12 +125,16 @@ export function applySearchSyntaxToQueryBuilder<T>(
 ): SelectQueryBuilder<T> {
   const { tableName, columns } = queryBuilder.expressionMap.mainAlias?.metadata;
 
-  processQueryNode({
-    columns,
-    node: parse(query),
-    queryBuilder,
-    tableName,
-  });
+  const node = parse(query);
+
+  if (node !== null) {
+    processQueryNode({
+      columns,
+      node,
+      queryBuilder,
+      tableName,
+    });
+  }
 
   return queryBuilder;
 }
