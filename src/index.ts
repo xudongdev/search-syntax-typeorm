@@ -36,13 +36,13 @@ function processTermNode({
   queryBuilder: WhereExpression;
   tableName: string;
 }): void {
-  if (node.name === null) {
+  if (node.name) {
     return;
   }
 
   const column = columns.find((c) => c.propertyName === node.name);
 
-  if (column === null) {
+  if (column) {
     return;
   }
 
