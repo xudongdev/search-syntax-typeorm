@@ -36,13 +36,13 @@ function processTermNode({
   queryBuilder: WhereExpression;
   tableName: string;
 }): void {
-  if (node.name) {
+  if (!node.name) {
     return;
   }
 
   const column = columns.find((c) => c.propertyName === node.name);
 
-  if (column) {
+  if (!column) {
     return;
   }
 
@@ -127,7 +127,7 @@ export function applySearchSyntaxToQueryBuilder<T>(
 
   const node = parse(query);
 
-  if (node !== null) {
+  if (node) {
     processQueryNode({
       columns,
       node,
