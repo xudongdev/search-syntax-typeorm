@@ -63,7 +63,7 @@ function processTermNode({
     node.comparator === Comparator.EQ &&
     typeof node.value === "string"
   ) {
-    where = `${tableName}.${databaseName} ILIKE :${parameterKey}`;
+    where = `LOWER(${tableName}.${databaseName}) LIKE LOWER(:${parameterKey})`;
     parameters = { [parameterKey]: `%${node.value}%` };
   }
 
