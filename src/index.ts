@@ -67,8 +67,13 @@ function processTermNode({
     parameters = { [parameterKey]: `%${node.value}%` };
   }
 
-  if (column.isArray && node.comparator === Comparator.EQ) {
-    where = `:${parameterKey} = ANY(${tableName}.${databaseName})`;
+  if (
+    column.type === "json" &&
+    column.isArray &&
+    node.comparator === Comparator.EQ
+  ) {
+    where = `JSON_CONTAINS('${tableName}.${databaseName}','${parameterKey}')`;
+    parameters = { [parameterKey]: JSON.stringify(node.value) };
   }
 
   if (node.not) {
