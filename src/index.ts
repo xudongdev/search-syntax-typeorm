@@ -72,7 +72,7 @@ function processTermNode({
     column.isArray &&
     node.comparator === Comparator.EQ
   ) {
-    where = `JSON_CONTAINS('${tableName}.${databaseName}','${parameterKey}')`;
+    where = `JSON_CONTAINS('${tableName}.${databaseName}',':${parameterKey}')`;
     parameters = { [parameterKey]: JSON.stringify(node.value) };
   }
 
