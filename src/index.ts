@@ -69,7 +69,12 @@ function processTermNode({
 
   if (
     column.type === "json" &&
-    column.isArray &&
+    typeof column.entityMetadata.target === "function" &&
+    Reflect.getMetadata(
+      "design:type",
+      column.entityMetadata.target.prototype,
+      column.propertyName
+    ) === Array &&
     node.comparator === Comparator.EQ
   ) {
     where = `JSON_CONTAINS(${tableName}.${databaseName}, :${parameterKey})`;
