@@ -102,8 +102,6 @@ function processTermNode<T>(
 
   // 如果查询的是关联字段，自动加载关联表
   if (column.relationMetadata) {
-    console.log("@@@", column.relationMetadata.inverseEntityMetadata.tableName);
-
     queryBuilder.leftJoinAndSelect(
       `${tableName}.${column.propertyName}`,
       column.relationMetadata.inverseEntityMetadata.tableName
