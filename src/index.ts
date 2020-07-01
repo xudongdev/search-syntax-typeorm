@@ -15,6 +15,11 @@ import {
 } from "typeorm";
 import { ColumnMetadata } from "typeorm/metadata/ColumnMetadata";
 
+interface ProcessNodeOptions {
+  connective?: Connective;
+  whereExpression?: WhereExpression;
+}
+
 const comparators = {
   [Comparator.EQ]: "=",
   [Comparator.LT]: "<",
@@ -23,34 +28,19 @@ const comparators = {
   [Comparator.GE]: ">=",
 };
 
-function processTermNode({
-  columns,
-  connective,
-  node,
-  queryBuilder,
-  tableName,
-}: {
-  columns: ColumnMetadata[];
-  connective: Connective;
-  node: TermNode;
-  queryBuilder: WhereExpression;
-  tableName: string;
-}): void {
-  if (!node.name) {
-    return;
-  }
-
-  const column = columns.find((c) => c.propertyName === node.name);
-
-  if (!column) {
-    return;
-  }
+function applyWhereToQueryBuilder<T>(
+  queryBuilder: SelectQueryBuilder<T>,
+  tableName: string,
+  column: ColumnMetadata,
+  node: TermNode,
+  options: ProcessNodeOptions = {}
+) {
+  const connective = options.connective || Connective.AND;
+  const whereExpression = options.whereExpression || queryBuilder;
 
   const parameterKey = crypto.randomBytes(4).toString("hex");
 
-  const { databaseName } = column;
-
-  let where = `${tableName}.${databaseName} ${
+  let where = `${tableName}.${column.databaseName} ${
     comparators[node.comparator]
   } :${parameterKey}`;
 
@@ -63,7 +53,7 @@ function processTermNode({
     node.comparator === Comparator.EQ &&
     typeof node.value === "string"
   ) {
-    where = `LOWER(${tableName}.${databaseName}) LIKE LOWER(:${parameterKey})`;
+    where = `LOWER(${tableName}.${column.databaseName}) LIKE LOWER(:${parameterKey})`;
     parameters = { [parameterKey]: `%${node.value}%` };
   }
 
@@ -77,7 +67,7 @@ function processTermNode({
     ) === Array &&
     node.comparator === Comparator.EQ
   ) {
-    where = `JSON_CONTAINS(${tableName}.${databaseName}, :${parameterKey})`;
+    where = `JSON_CONTAINS(${tableName}.${column.databaseName}, :${parameterKey})`;
     parameters = { [parameterKey]: JSON.stringify(node.value) };
   }
 
@@ -85,45 +75,81 @@ function processTermNode({
     where = `NOT (${where})`;
   }
 
-  queryBuilder[connective === Connective.AND ? "andWhere" : "orWhere"](
+  whereExpression[connective === Connective.AND ? "andWhere" : "orWhere"](
     where,
     parameters
   );
 }
 
-function processQueryNode({
-  connective = Connective.AND,
-  columns,
-  node: { value },
-  queryBuilder,
-  tableName,
-}: {
-  columns: ColumnMetadata[];
-  connective?: Connective;
-  node: QueryNode;
-  queryBuilder: WhereExpression;
-  tableName: string;
-}): void {
+function processTermNode<T>(
+  queryBuilder: SelectQueryBuilder<T>,
+  node: TermNode,
+  options: ProcessNodeOptions = {}
+): void {
+  // 跳过没有指定字段的查询项
+  if (!node.name) return;
+
+  const connective = options.connective || Connective.AND;
+  const whereExpression = options.whereExpression || queryBuilder;
+
+  const { tableName, columns } = queryBuilder.expressionMap.mainAlias?.metadata;
+
+  const propertyNamePrefix = node.name.split(".")[0];
+
+  // 跳过找不到列的查询项
+  const column = columns.find((c) => c.propertyName === propertyNamePrefix);
+  if (!column) return;
+
+  // 如果查询的是关联字段，自动加载关联表
+  if (column.relationMetadata) {
+    console.log("@@@", column.relationMetadata.inverseEntityMetadata.tableName);
+
+    queryBuilder.leftJoinAndSelect(
+      `${tableName}.${column.propertyName}`,
+      column.relationMetadata.inverseEntityMetadata.tableName
+    );
+
+    applyWhereToQueryBuilder<T>(
+      queryBuilder,
+      column.relationMetadata.inverseEntityMetadata.tableName,
+      column.relationMetadata.inverseEntityMetadata.columns.find(
+        (c) => c.propertyName === node.name.split(".")[1]
+      ),
+      node,
+      {
+        connective,
+        whereExpression,
+      }
+    );
+  } else {
+    applyWhereToQueryBuilder<T>(queryBuilder, tableName, column, node, {
+      connective,
+      whereExpression,
+    });
+  }
+}
+
+function processQueryNode<T>(
+  queryBuilder: SelectQueryBuilder<T>,
+  { value }: QueryNode,
+  options: ProcessNodeOptions = {}
+): void {
+  const connective = options.connective || Connective.AND;
+  const whereExpression = options.whereExpression || queryBuilder;
+
   value.forEach((item) => {
     if (item.node.type === NodeType.QUERY) {
-      queryBuilder[connective === Connective.AND ? "andWhere" : "orWhere"](
+      whereExpression[connective === Connective.AND ? "andWhere" : "orWhere"](
         new Brackets((qb: WhereExpression) => {
-          processQueryNode({
+          processQueryNode(queryBuilder, item.node as QueryNode, {
             connective: item.connective,
-            columns,
-            node: item.node as QueryNode,
-            queryBuilder: qb,
-            tableName,
+            whereExpression: qb,
           });
         })
       );
     } else {
-      processTermNode({
-        columns,
+      processTermNode(queryBuilder, item.node, {
         connective,
-        node: item.node,
-        queryBuilder,
-        tableName,
       });
     }
   });
@@ -133,17 +159,10 @@ export function applySearchSyntaxToQueryBuilder<T>(
   queryBuilder: SelectQueryBuilder<T>,
   query: string
 ): SelectQueryBuilder<T> {
-  const { tableName, columns } = queryBuilder.expressionMap.mainAlias?.metadata;
-
   const node = parse(query);
 
   if (node) {
-    processQueryNode({
-      columns,
-      node,
-      queryBuilder,
-      tableName,
-    });
+    processQueryNode<T>(queryBuilder, node);
   }
 
   return queryBuilder;
