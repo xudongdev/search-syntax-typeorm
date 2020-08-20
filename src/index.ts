@@ -48,6 +48,11 @@ function applyWhereToQueryBuilder<T>(
     [parameterKey]: node.value,
   };
 
+  // 如果值为空
+  if (node.value === null) {
+    where = `${tableName}.${column.databaseName} IS NULL`;
+  }
+
   if (
     !column.isArray &&
     node.comparator === Comparator.EQ &&
