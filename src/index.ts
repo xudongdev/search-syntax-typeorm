@@ -159,6 +159,7 @@ function processQueryNode<T>(
     } else {
       processTermNode(queryBuilder, item.node, {
         connective,
+        whereExpression,
       });
     }
   });
