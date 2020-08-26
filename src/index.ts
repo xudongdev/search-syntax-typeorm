@@ -50,7 +50,13 @@ function applyWhereToQueryBuilder<T>(
 
   // 如果值为空
   if (node.value === null) {
-    where = `${tableName}.${column.databaseName} IS NULL`;
+    whereExpression[connective === Connective.AND ? "andWhere" : "orWhere"](
+      node.not
+        ? `${tableName}.${column.databaseName} IS NOT NULL`
+        : `${tableName}.${column.databaseName} IS NULL`
+    );
+
+    return;
   }
 
   if (
