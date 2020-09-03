@@ -17,7 +17,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
     "prepublish": "npm run build",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -49,6 +49,7 @@
     "lint-staged": "^10.3.0",
     "prettier": "^2.1.1",
     "reflect-metadata": "^0.1.13",
+    "rimraf": "^3.0.2",
     "search-syntax": "^1.1.4",
     "semantic-release": "^17.1.1",
     "sqlite3": "^5.0.0",
