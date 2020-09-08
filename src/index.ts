@@ -15,9 +15,12 @@ import {
 } from "typeorm";
 import { ColumnMetadata } from "typeorm/metadata/ColumnMetadata";
 
-interface ProcessNodeOptions {
-  connective?: Connective;
-  whereExpression?: WhereExpression;
+interface ProcessNodeOptions<T> {
+  columns: ColumnMetadata[];
+  connective: Connective;
+  queryBuilder: SelectQueryBuilder<T>;
+  subQueryBuilder?: WhereExpression;
+  tableName: string;
 }
 
 const comparators = {
@@ -29,14 +32,13 @@ const comparators = {
 };
 
 function applyWhereToQueryBuilder<T>(
-  queryBuilder: SelectQueryBuilder<T>,
+  node: TermNode,
   tableName: string,
   column: ColumnMetadata,
-  node: TermNode,
-  options: ProcessNodeOptions = {}
+  options: ProcessNodeOptions<T>
 ) {
-  const connective = options.connective || Connective.AND;
-  const whereExpression = options.whereExpression || queryBuilder;
+  const { connective } = options;
+  const whereExpression = options.subQueryBuilder || options.queryBuilder;
 
   const parameterKey = crypto.randomBytes(4).toString("hex");
 
@@ -93,17 +95,13 @@ function applyWhereToQueryBuilder<T>(
 }
 
 function processTermNode<T>(
-  queryBuilder: SelectQueryBuilder<T>,
   node: TermNode,
-  options: ProcessNodeOptions = {}
+  options: ProcessNodeOptions<T>
 ): void {
   // 跳过没有指定字段的查询项
   if (!node.name) return;
 
-  const connective = options.connective || Connective.AND;
-  const whereExpression = options.whereExpression || queryBuilder;
-
-  const { tableName, columns } = queryBuilder.expressionMap.mainAlias?.metadata;
+  const { columns, queryBuilder, tableName } = options;
 
   const propertyNamePrefix = node.name.split(".")[0];
 
@@ -119,47 +117,40 @@ function processTermNode<T>(
     );
 
     applyWhereToQueryBuilder<T>(
-      queryBuilder,
+      node,
       column.relationMetadata.inverseEntityMetadata.tableName,
       column.relationMetadata.inverseEntityMetadata.columns.find(
         (c) => c.propertyName === node.name.split(".")[1]
       ),
-      node,
-      {
-        connective,
-        whereExpression,
-      }
+      options
     );
   } else {
-    applyWhereToQueryBuilder<T>(queryBuilder, tableName, column, node, {
-      connective,
-      whereExpression,
-    });
+    applyWhereToQueryBuilder<T>(node, tableName, column, options);
   }
 }
 
 function processQueryNode<T>(
-  queryBuilder: SelectQueryBuilder<T>,
   { value }: QueryNode,
-  options: ProcessNodeOptions = {}
+  options: ProcessNodeOptions<T>
 ): void {
   const connective = options.connective || Connective.AND;
-  const whereExpression = options.whereExpression || queryBuilder;
+  const whereExpression = options.subQueryBuilder || options.queryBuilder;
 
   value.forEach((item) => {
     if (item.node.type === NodeType.QUERY) {
       whereExpression[connective === Connective.AND ? "andWhere" : "orWhere"](
-        new Brackets((qb: WhereExpression) => {
-          processQueryNode(queryBuilder, item.node as QueryNode, {
+        new Brackets((subQueryBuilder) => {
+          processQueryNode<T>(item.node as QueryNode, {
+            ...options,
             connective: item.connective,
-            whereExpression: qb,
+            subQueryBuilder,
           });
         })
       );
     } else {
-      processTermNode(queryBuilder, item.node, {
+      processTermNode(item.node, {
+        ...options,
         connective: item.connective,
-        whereExpression,
       });
     }
   });
@@ -171,8 +162,20 @@ export function applySearchSyntaxToQueryBuilder<T>(
 ): SelectQueryBuilder<T> {
   const node = parse(query);
 
+  const { tableName, columns } = queryBuilder.expressionMap.mainAlias?.metadata;
+
   if (node) {
-    processQueryNode<T>(queryBuilder, node);
+    queryBuilder.andWhere(
+      new Brackets((subQueryBuilder) => {
+        processQueryNode<T>(node, {
+          columns,
+          connective: Connective.AND,
+          queryBuilder,
+          subQueryBuilder,
+          tableName,
+        });
+      })
+    );
   }
 
   return queryBuilder;

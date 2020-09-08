@@ -25,7 +25,7 @@ describe("QueryBuilder", () => {
     );
 
     expect(queryBuilder.getSql()).toBe(
-      'SELECT "User"."id" AS "User_id", "User"."name" AS "User_name", "User"."enable" AS "User_enable", "User"."createdAt" AS "User_createdAt", "User"."updatedAt" AS "User_updatedAt" FROM "user" "User" WHERE LOWER(user.name) LIKE LOWER(?) AND user.enable = ?'
+      'SELECT "User"."id" AS "User_id", "User"."name" AS "User_name", "User"."enable" AS "User_enable", "User"."createdAt" AS "User_createdAt", "User"."updatedAt" AS "User_updatedAt" FROM "user" "User" WHERE (LOWER(user.name) LIKE LOWER(?) AND user.enable = ?)'
     );
   });
 
@@ -38,7 +38,7 @@ describe("QueryBuilder", () => {
     );
 
     expect(queryBuilder.getSql()).toBe(
-      'SELECT "User"."id" AS "User_id", "User"."name" AS "User_name", "User"."enable" AS "User_enable", "User"."createdAt" AS "User_createdAt", "User"."updatedAt" AS "User_updatedAt" FROM "user" "User" WHERE LOWER(user.name) LIKE LOWER(?) OR user.enable = ?'
+      'SELECT "User"."id" AS "User_id", "User"."name" AS "User_name", "User"."enable" AS "User_enable", "User"."createdAt" AS "User_createdAt", "User"."updatedAt" AS "User_updatedAt" FROM "user" "User" WHERE (LOWER(user.name) LIKE LOWER(?) OR user.enable = ?)'
     );
   });
 });
